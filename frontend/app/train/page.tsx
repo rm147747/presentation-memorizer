@@ -35,7 +35,8 @@ export default function TreinarPage() {
   const [error, setError] = useState<string | null>(null)
 
   function setErr(msg: unknown) {
-    setError(msg instanceof ApiError ? msg.message : String(msg))
+    if (msg instanceof Error) setError(msg.message)
+    else setError(String(msg))
   }
 
   async function handleNewSession() {
@@ -46,7 +47,6 @@ export default function TreinarPage() {
     try {
       const pid = inputPresId
       setPresId(pid)
-      const r = await api.post<SessionResponse>('/sessions/', null)
       // sessions/ uses query params
       const params = new URLSearchParams({ presentation_id: String(pid), level: String(level) })
       const res = await fetch(
@@ -55,7 +55,10 @@ export default function TreinarPage() {
       )
       if (!res.ok) {
         const j = await res.json().catch(() => ({}))
-        throw new ApiError(res.status, j.detail ?? res.statusText)
+        const detail = Array.isArray(j.detail)
+          ? j.detail.map((e: { msg?: string }) => e.msg ?? JSON.stringify(e)).join('; ')
+          : (j.detail ?? res.statusText)
+        throw new ApiError(res.status, detail)
       }
       const data: SessionResponse = await res.json()
       setSessionId(data.session_id)

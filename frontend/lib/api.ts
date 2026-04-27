@@ -12,7 +12,10 @@ async function request<T>(method: string, path: string, init: RequestInit = {}):
     let detail = res.statusText
     try {
       const json = await res.json()
-      detail = json.detail ?? detail
+      const raw = json.detail ?? detail
+      detail = Array.isArray(raw)
+        ? raw.map((e: { msg?: string }) => e.msg ?? JSON.stringify(e)).join('; ')
+        : String(raw)
     } catch { /* non-JSON body */ }
     throw new ApiError(res.status, detail)
   }
